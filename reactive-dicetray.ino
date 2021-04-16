@@ -16,6 +16,8 @@ void setup() {
   pinMode(LED_DATA, OUTPUT);
   pinMode(CONST_OUT, OUTPUT);
   digitalWrite(CONST_OUT, HIGH);
+  Serial.begin(38400);
+
 }
 
 //mic
@@ -25,13 +27,11 @@ int trigger = 0;
 boolean animationRunning = false;
 int animationTime = 3000;
 unsigned long animationStart = 0;
-int currentAnimation = 0;
+int currentAnimation = 1;
 
 //button
-int lastButtonState = LOW;
-int buttonState;
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 50;
+unsigned long debounceDelay = 1000;
 
 
 //general
@@ -42,41 +42,55 @@ int setting = 0; //0 - reactive, 1 - reactive low brightness, 2 - ambient
 
 boolean buttonPressed() {
   int reading = digitalRead(BUTTON);
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
-  }
+
   if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != buttonState) {
-      buttonState = reading;
-      if (buttonState == HIGH) {
-        return true;
-      }
+    if (reading == HIGH) {
+      lastDebounceTime = millis();
+      return true;
     }
   }
   return false;
 }
 
-void loop() {
-  
-  if (!settingsMode) {
-    if (buttonPressed()) {
-      settingsMode = true;
-      settingsStartTime = millis();
-      return;
-    }
+void showIndicator() {
+  allOff();
+  if (setting == 0) {
+    plainColor(0, 8, CRGB(255, 255, 255));
+  } else if (setting == 1) {
+    plainColor(9, 20, CRGB(0, 0, 255));
+  } else if (setting == 2) {
+    plainColor(21, 29, CRGB(255, 0, 255));
   } else {
-    if ((millis() - settingsStartTime) > settingsOffDelay) {
-      settingsMode = false;
-    } else {
-      if (buttonPressed()) {
-        setting++;
-        if (setting > 2) {
-          setting = 0;
-        }
-      }
-    }
     return;
   }
+}
+
+void loop() {
+  //  if (!settingsMode) {
+  //    if (buttonPressed()) {
+  //      settingsMode = true;
+  //      settingsStartTime = millis();
+  //      return;
+  //    }
+  //  } else {
+  //    if ((millis() - settingsStartTime) > settingsOffDelay) {
+  //      settingsMode = false;
+  //      return;
+  //    } else {
+  //
+  //      if (buttonPressed()) {
+  //
+  //
+  //        setting++;
+  //        if (setting > 2) {
+  //          setting = 0;
+  //        }
+  //                Serial.println(setting);
+  //
+  //      }
+  //    }
+  //    return;
+  //  }
 
   if (!animationRunning) {
     trigger = !digitalRead(TRIGGER);
@@ -87,7 +101,7 @@ void loop() {
           runAroundAndFlashFade();
           break;
         case 1:
-          //generatorTest();
+          runAroundAndFlashFadeMulticolor();
           break;
       }
       allOff();
@@ -104,9 +118,31 @@ void allOff() {
     FastLED.show();
   }
 }
+void plainColor(int startIdx, int endIdx, CRGB color) {
+  for (int i = startIdx; i <= endIdx; i++) {
+    leds[i] = color;
+  }
+  FastLED.show();
+}
+void runAroundAndFlashFadeMulticolor() {
+
+
+  runAround(CRGB(255, 0, 0),2);
+  runAround(CRGB(255, 0, 255),2);
+  runAround(CRGB(0, 0, 255),2);
+  runAround(CRGB(0, 255, 255),2);
+  runAround(CRGB(0, 255, 0),2);
+  runAround(CRGB(255, 255, 0),2);
+
+  fadeIn(10);
+  fadeOut(10);
+  delay(500);
+}
+
 void runAroundAndFlashFade() {
+
   for (int i = 0; i < 3; i++) {
-    runAround(CRGB(120, 120, 120));
+    runAround(CRGB(120, 120, 120),5);
   }
   fadeIn(15);
   fadeOut(15);
@@ -137,14 +173,14 @@ void fadeOut(int speed) {
   FastLED.show();
   delay(20);
 }
-void runAround(CRGB color) {
+void runAround(CRGB color, int ledDelay) {
   for (int i = 0; i < NUM_LEDS; i++) {
     if (i != 0) {
       leds[i - 1] = CRGB(0, 0, 0);
     }
     leds[i] = color;
     FastLED.show();
-    delay(5);
+    delay(ledDelay);
   }
   leds[NUM_LEDS - 1] = CRGB(0, 0, 0);
   FastLED.show();
